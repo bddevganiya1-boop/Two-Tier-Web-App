@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | Two-Tier Container App{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="header-content">
+        <h1 class="page-title">
+            <span class="gradient-text">Containerized Two-Tier Architecture</span>
+        </h1>
+        <p class="page-subtitle">
+            Microservice-ready full-stack orchestration using Docker Compose, Custom Bridge Networking, and Persistent Storage.
+        </p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-primary" id="openCreateModalBtn">
+            <i class="fa-solid fa-plus"></i> Add New Task
+        </button>
+    </div>
+</div>
+
+<!-- Architecture Telemetry Card -->
+<div class="telemetry-grid">
+    <div class="telemetry-card">
+        <div class="telemetry-icon tier-web-icon">
+            <i class="fa-brands fa-python"></i>
+        </div>
+        <div class="telemetry-info">
+            <span class="telemetry-label">Tier 1: Web / API Backend</span>
+            <span class="telemetry-value">Flask (Gunicorn WSGI)</span>
+            <div class="telemetry-meta">
+                <span>Container: <code>{{ hostname }}</code></span>
+                <span>Port: <code>5000</code></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="telemetry-card">
+        <div class="telemetry-icon tier-db-icon">
+            <i class="fa-solid fa-database"></i>
+        </div>
+        <div class="telemetry-info">
+            <span class="telemetry-label">Tier 2: Persistent Storage</span>
+            <span class="telemetry-value">MySQL 8.0</span>
+            <div class="telemetry-meta">
+                <span>Host: <code>{{ db_host }}</code></span>
+                <span>Database: <code>{{ db_name }}</code></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="telemetry-card">
+        <div class="telemetry-icon tier-net-icon">
+            <i class="fa-solid fa-network-wired"></i>
+        </div>
+        <div class="telemetry-info">
+            <span class="telemetry-label">Docker Network</span>
+            <span class="telemetry-value">Custom Bridge Network</span>
+            <div class="telemetry-meta">
+                <span>DNS Name: <code>two-tier-net</code></span>
+                <span>Driver: <code>bridge</code></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="telemetry-card">
+        <div class="telemetry-icon tier-vol-icon">
+            <i class="fa-solid fa-hard-drive"></i>
+        </div>
+        <div class="telemetry-info">
+            <span class="telemetry-label">Docker Volume</span>
+            <span class="telemetry-value">Persistent Named Volume</span>
+            <div class="telemetry-meta">
+                <span>Mount: <code>/var/lib/mysql</code></span>
+                <span>Storage: <code>db_data</code></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if db_error %}
+<div class="alert alert-danger" style="margin-bottom: 2rem;">
+    <div class="alert-content">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>
+            <strong>Database Connection Error:</strong>
+            <p style="margin: 0.25rem 0 0; font-family: monospace; font-size: 0.85rem;">{{ db_error }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Metric Summary Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Total Tasks</span>
+            <div class="stat-badge badge-all"><i class="fa-solid fa-list-check"></i></div>
+        </div>
+        <div class="stat-count">{{ total_tasks }}</div>
+        <div class="stat-caption">Synchronized with MySQL</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Pending</span>
+            <div class="stat-badge badge-pending"><i class="fa-solid fa-clock"></i></div>
+        </div>
+        <div class="stat-count">{{ pending_tasks }}</div>
+        <div class="stat-caption">Awaiting action</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">In Progress</span>
+            <div class="stat-badge badge-inprogress"><i class="fa-solid fa-spinner"></i></div>
+        </div>
+        <div class="stat-count">{{ in_progress_tasks }}</div>
+        <div class="stat-caption">Active deployment/work</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Completed</span>
+            <div class="stat-badge badge-completed"><i class="fa-solid fa-circle-check"></i></div>
+        </div>
+        <div class="stat-count">{{ completed_tasks }}</div>
+        <div class="stat-caption">Successfully resolved</div>
+    </div>
+</div>
+
+<!-- Task Control Bar -->
+<div class="content-section">
+    <div class="section-toolbar">
+        <div class="search-filter-wrapper">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="taskSearchInput" placeholder="Search tasks by title or keyword..." autocomplete="off">
+            </div>
+            
+            <div class="filter-pills">
+                <button class="filter-pill active" data-filter="all">All ({{ total_tasks }})</button>
+                <button class="filter-pill" data-filter="Pending">Pending</button>
+                <button class="filter-pill" data-filter="In Progress">In Progress</button>
+                <button class="filter-pill" data-filter="Completed">Completed</button>
+            </div>
+        </div>
+        <div class="toolbar-actions">
+            <button class="btn btn-secondary" id="viewLogsBtn">
+                <i class="fa-solid fa-clock-rotate-left"></i> Audit Logs
+            </button>
+        </div>
+    </div>
+
+    <!-- Tasks Grid / List -->
+    <div class="tasks-container" id="tasksList">
+        {% if tasks %}
+            {% for task in tasks %}
+            <div class="task-card" data-status="{{ task.status }}" data-priority="{{ task.priority }}" id="task-{{ task.id }}">
+                <div class="task-card-header">
+                    <div class="task-priority priority-{{ task.priority | lower }}">
+                        <span class="priority-dot"></span> {{ task.priority }}
+                    </div>
+                    <div class="task-status status-{{ task.status | lower | replace(' ', '-') }}">
+                        {{ task.status }}
+                    </div>
+                </div>
+
+                <div class="task-card-body">
+                    <h3 class="task-title">{{ task.title }}</h3>
+                    <p class="task-description">{{ task.description or 'No additional description provided.' }}</p>
+                </div>
+
+                <div class="task-card-footer">
+                    <div class="task-timestamp">
+                        <i class="fa-regular fa-clock"></i> {{ task.created_at.strftime('%b %d, %Y %H:%M') if task.created_at else 'Just now' }}
+                    </div>
+                    <div class="task-actions">
+                        <!-- Quick Status Switch Dropdown Form -->
+                        <form action="{{ url_for('update_task_status', task_id=task.id) }}" method="POST" class="inline-form">
+                            <select name="status" class="status-select" onchange="this.form.submit()">
+                                <option value="Pending" {% if task.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                <option value="In Progress" {% if task.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                                <option value="Completed" {% if task.status == 'Completed' %}selected{% endif %}>Completed</option>
+                            </select>
+                        </form>
+
+                        <!-- Delete Task Form -->
+                        <form action="{{ url_for('delete_task', task_id=task.id) }}" method="POST" class="inline-form" onsubmit="return confirm('Delete task: {{ task.title }}?');">
+                            <button type="submit" class="btn-icon btn-delete" title="Delete Task">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+                <h3>No Tasks Found</h3>
+                <p>Add your first task above to test writing data directly to MySQL from the Flask container!</p>
+                <button class="btn btn-primary" onclick="document.getElementById('openCreateModalBtn').click()">
+                    <i class="fa-solid fa-plus"></i> Create First Task
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal" id="createTaskModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-plus-circle"></i> Create New Task</h3>
+            <button class="modal-close" id="closeCreateModal">&times;</button>
+        </div>
+        <form action="{{ url_for('add_task') }}" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="taskTitle">Task Title <span class="required">*</span></label>
+                    <input type="text" id="taskTitle" name="title" class="form-input" placeholder="e.g. Configure Nginx Reverse Proxy" required>
+                </div>
+                <div class="form-group">
+                    <label for="taskDesc">Description</label>
+                    <textarea id="taskDesc" name="description" class="form-textarea" rows="4" placeholder="Describe the task or implementation details..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-half">
+                        <label for="taskPriority">Priority</label>
+                        <select id="taskPriority" name="priority" class="form-select">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-half">
+                        <label for="taskStatus">Status</label>
+                        <select id="taskStatus" name="status" class="form-select">
+                            <option value="Pending" selected>Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelCreateModal">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save to MySQL</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Audit Logs Modal -->
+<div class="modal" id="auditLogsModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-clock-rotate-left"></i> Database Audit Logs</h3>
+            <button class="modal-close" id="closeAuditModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="table-responsive">
+                <table class="audit-table">
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th>Details</th>
+                            <th>IP Address</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditLogsBody">
+                        <tr>
+                            <td colspan="4" class="text-center"><i class="fa-solid fa-spinner fa-spin"></i> Loading audit records...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="closeAuditModalBtn">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

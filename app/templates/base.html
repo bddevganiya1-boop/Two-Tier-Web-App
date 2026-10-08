@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Two-Tier Web Application{% endblock %} | Docker & Flask & MySQL</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dark-theme">
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fa-brands fa-docker brand-icon"></i>
+                <div class="brand-text">
+                    <span class="brand-title">Two-Tier DevOps Stack</span>
+                    <span class="brand-subtitle">Flask Web Tier <i class="fa-solid fa-link fa-xs"></i> MySQL DB Tier</span>
+                </div>
+            </div>
+            
+            <div class="nav-status-pills">
+                <div class="status-pill {% if db_status == 'Connected' %}pill-success{% else %}pill-danger{% endif %}" id="dbStatusBadge">
+                    <span class="status-dot"></span>
+                    <i class="fa-solid fa-database"></i>
+                    <span>MySQL: <strong>{{ db_status }}</strong></span>
+                </div>
+                <div class="status-pill pill-info">
+                    <i class="fa-solid fa-server"></i>
+                    <span>Host: <code>{{ hostname }}</code></span>
+                </div>
+            </div>
+
+            <div class="nav-actions">
+                <button class="btn btn-outline" id="refreshHealthBtn" title="Test Health API">
+                    <i class="fa-solid fa-heart-pulse"></i> Check Health
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="main-wrapper">
+        <!-- Flash Messages -->
+        <div class="flash-messages-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} animate-slide-in">
+                            <div class="alert-content">
+                                <i class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'danger' %}fa-circle-exclamation{% elif category == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                            <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-left">
+                <span><i class="fa-brands fa-docker"></i> Containerized Two-Tier Architecture</span>
+                <span class="separator">•</span>
+                <span>Docker Bridge Network</span>
+                <span class="separator">•</span>
+                <span>Named Volume Persistence</span>
+            </div>
+            <div class="footer-right">
+                <span>Flask (Python 3.11) + MySQL 8.0</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Health Modal -->
+    <div class="modal" id="healthModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-heart-pulse"></i> System & Container Health</h3>
+                <button class="modal-close" id="closeHealthModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="health-results" id="healthResults">
+                    <div class="loading-spinner"><i class="fa-solid fa-spinner fa-spin"></i> Querying /api/health...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="closeHealthModalBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
